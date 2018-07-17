@@ -319,7 +319,7 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
          if (ev.type == TSTARTMSG) {
             Thread* t = (Thread*)ev.user.data1;
             (void)t;
-            printf("MTPROC received TSTARTMSG from THREADID %03u at %p.\n" , t->ID() , t);
+///            printf("MTPROC received TSTARTMSG from THREADID %03u at %p.\n" , t->ID() , t);
 
             /// Relay event to user
             al_emit_user_event(tpool->usereventsource , &ev , 0);
@@ -328,7 +328,7 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
          /// A thread notified us that it has stopped
          if (ev.type == TSTOPMSG) {
             Thread* t = (Thread*)ev.user.data1;
-            printf("MTPROC received TSTOPMSG from THREADID %03u at %p.\n" , t->ID() , t);
+///            printf("MTPROC received TSTOPMSG from THREADID %03u at %p.\n" , t->ID() , t);
             assert(t == tpool->GetThread(t->ID()));
 
             tpool->FinishJob(t);
@@ -338,7 +338,7 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
 
             /// If our job queue is now empty, emit an event
             int njobs = tpool->NumJobsLeft();
-            printf("NJOBS left = %d\n" , njobs);
+///            printf("NJOBS left = %d\n" , njobs);
             if (njobs == 0) {
                ALLEGRO_EVENT ev2;
                ev2.type = FINISHMSG;

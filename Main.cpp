@@ -107,7 +107,7 @@ void* Sum(ALLEGRO_THREAD* t , void* data) {
 
 
 
-int main(int argc , char** argv) {
+int main6(int argc , char** argv) {
    (void)argc;
    (void)argv;
 
@@ -148,7 +148,7 @@ int main(int argc , char** argv) {
    return 0;
 }
 
-int main3(int argc , char** argv) {
+int main(int argc , char** argv) {
 
    (void)argc;
    (void)argv;
@@ -157,6 +157,7 @@ int main3(int argc , char** argv) {
    int bw = 64;
    int bh = 64;
    int nbitmaps = 50;
+   char ext[4] = {'p','n','g','\0'};
 
    bool usage = false;
 
@@ -184,6 +185,21 @@ int main3(int argc , char** argv) {
          }
          if (nbitmaps < 10) {nbitmaps = 10;}
       }
+      else if (arg.compare(0 , 2 , "-e") == 0) {
+         if (3 != sscanf(arg.c_str() , "-e%c%c%c" , &ext[0] , &ext[1] , &ext[2])) {
+            printf("Couldn't read extension.\n");
+            usage = true;
+         }
+         bool recognized = false;
+         if (strncmp(ext , "png" , 3) == 0) {recognized = true;}
+         if (strncmp(ext , "bmp" , 3) == 0) {recognized = true;}
+         if (strncmp(ext , "jpg" , 3) == 0) {recognized = true;}
+         if (strncmp(ext , "tga" , 3) == 0) {recognized = true;}
+         if (!recognized) {
+            printf("%s is not a recognized image file format.\n" , ext);
+            usage = true;
+         }
+      }
       else if (arg.compare("-h") == 0) {
          usage = true;
       }
@@ -198,14 +214,15 @@ int main3(int argc , char** argv) {
       printf("Usage for tpool :\n");
       printf("tpool [options]\n");
       printf("Options :\n");
-      printf("-j# where # is the number of threads to use.\n");
-      printf("-n# where # is the number of bitmaps to save.\n");
-      printf("-b#x# where # is the width and height of the bitmap to save.\n");
+      printf("-j# where # is the number of threads to use. Default is 1.\n");
+      printf("-n# where # is the number of bitmaps to save. Default is 50.\n");
+      printf("-b#x# where # is the width and height of the bitmap to save. Default is 64x64.\n");
+      printf("-e$$$ where $$$ is the output file format. Default is png.\n");
       printf("-h shows help.\n");
       return -1;
    }
 
-   printf("Saving %d bitmaps of size %d x %d using %d threads.\n" , nbitmaps , bw , bh , jobs);
+   printf("Saving %d bitmaps of size %d x %d using %d threads in format %s.\n" , nbitmaps , bw , bh , jobs , ext);
 
 
    if (!al_init() || !al_init_image_addon() || !al_init_font_addon() || !al_init_ttf_addon()) {return 1;}
@@ -241,11 +258,9 @@ int main3(int argc , char** argv) {
       al_destroy_bitmap(bmp);
 
       char buf[512] = {'\0'};
-      sprintf(buf , "SavedImages/Bitmap%03d.png" , i);
+      sprintf(buf , "SavedImages/Bitmap%03d.%s" , i , ext);
       dat[i].name = buf;
-///      al_save_bitmap(dat[i].name.c_str() , dat[i].bmp);
    }
-///   return -5;
 
    al_set_target_backbuffer(d);
    al_clear_to_color(al_map_rgb(0,255,0));
@@ -331,14 +346,17 @@ int main3(int argc , char** argv) {
       total += thread->RunTime();
    }
    double average = total / nbitmaps;
-   printf("Average time of execution is %.6lf seconds. Total time is %.6lf seconds.\n" ,
-           average , ttotal);
+   printf("Average time of execution is %.6lf seconds. Total time is %.6lf seconds. Time saved is %.6lf seconds.\n" ,
+           average , ttotal , total - ttotal);
 
    tpool.Dispose();
 
-   delete dat;
+   for (int i = 0 ; i < nbitmaps ; ++i) {
+      al_destroy_bitmap(dat[i].bmp);
+      dat[i].bmp = 0;
+   }
 
-//*/
+   delete dat;
 
    return 0;
 }
@@ -358,3 +376,8 @@ void* SaveBitmap(ALLEGRO_THREAD* thread , void* data) {
 
 
 
+void* LoadBitmap(ALLEGRO_THREAD* t , void* data) {
+   (void)t;
+   DATA* dat = (DATA*)data;
+   return dat->bmp = al_load_bitmap(dat->name.c_str());   
+}

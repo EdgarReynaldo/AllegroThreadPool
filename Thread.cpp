@@ -30,10 +30,6 @@ static THREADID NextThreadID() {
 void* BypassProcess(ALLEGRO_THREAD* athread , void* data) {
    Thread* thread = (Thread*)data;
 
-   if (thread->tid == 860) {
-      printf("Thread 860 starting.\n");
-   }
-
    ALLEGRO_EVENT ev;
    ev.type = TSTARTMSG;
    ev.user.data1 = (intptr_t)thread;
@@ -49,10 +45,6 @@ void* BypassProcess(ALLEGRO_THREAD* athread , void* data) {
    ev2.type = TSTOPMSG;
    ev2.user.data1 = (intptr_t)thread;
    al_emit_user_event(thread->evsrc , &ev2 , 0);
-
-   if (thread->tid == 860) {
-      printf("Thread 860 exiting.\n");
-   }
 
    return thread->rdata;
 }
