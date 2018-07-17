@@ -52,9 +52,9 @@ Thread* ThreadPool::TakeNextJob() {
 void ThreadPool::EnqueueJob(Thread* t) {
 ///   printf("Inserting Thread %p into workers.\n" , t);
    workers.insert(t);
-   t->Run();
+   t->Start();
 }
-   
+
 
 
 void ThreadPool::FinishJob(Thread* t) {
@@ -77,6 +77,16 @@ void ThreadPool::Guard() {
 
 void ThreadPool::Unguard() {
    al_unlock_mutex(guard);
+}
+
+
+
+void ThreadPool::DisposeAll() {
+   for (std::map<THREADID , Thread*>::iterator it = all_jobs.begin() ; it != all_jobs.end() ; ++it) {
+      delete it->second;
+   }
+   all_jobs.clear();
+   complete_jobs.clear();
 }
 
 
@@ -110,7 +120,7 @@ ThreadPool::ThreadPool() :
    guard = al_create_mutex();
 
    master_thread = al_create_thread(MasterThreadProc , this);
-   
+
    al_start_thread(master_thread);
 }
 
@@ -120,9 +130,9 @@ ThreadPool::~ThreadPool() {
    if (running) {
       Kill();
    }
-   
-   Dispose();
-   
+
+   DisposeAll();
+
    al_destroy_thread(master_thread);
    master_thread = 0;
 
@@ -154,17 +164,14 @@ void ThreadPool::SetNumThreads(unsigned int N) {
 
 THREADID ThreadPool::AddJob(THREADPROC proc , void* data) {
    Thread* t = new Thread();
-   if (!t->Create(proc , data)) {
-      delete t;
-      return BADTHREADID;
-   }
+   t->Setup(proc , data);
    al_register_event_source(queue , t->EventSource());
 
    Guard();
    jobs.push_back(t);
    all_jobs[t->ID()] = t;
    Unguard();
-   
+
    /// In case our queue is empty and we're waiting on an event, send a dummy event
    if (!paused) {
       ALLEGRO_EVENT ev;
@@ -172,12 +179,12 @@ THREADID ThreadPool::AddJob(THREADPROC proc , void* data) {
       ev.user.data1 = (intptr_t)this;
       al_emit_user_event(oureventsource , &ev , 0);
    }
-   
+
    return t->ID();
 }
 
 
-   
+
 void ThreadPool::Start() {
    Resume();
 }
@@ -279,18 +286,18 @@ std::map<THREADID , Thread*> ThreadPool::GetAllJobs() {
 
 
 void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
-   
+
    ThreadPool* tpool = (ThreadPool*)data;
    if (!tpool) {return 0;}
-   
+
    ALLEGRO_EVENT_QUEUE* q = tpool->EventQueue();
-   
+
    bool kill = false;
-   
+
    tpool->running = true;
-   
+
    while (!al_get_thread_should_stop(thread) && !kill) {
-         
+
       /// Start new threads, up to limit
       if (!tpool->paused) {
          Thread* next = 0;
@@ -301,13 +308,13 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
          }
          tpool->Unguard();
       }
-      
+
 
       /// Wait for an event, from a thread or from main or wherever
       ALLEGRO_EVENT ev;
       do {
          al_wait_for_event(q , &ev);
-         
+
          /// A thread notified us that it is starting
          if (ev.type == TSTARTMSG) {
             Thread* t = (Thread*)ev.user.data1;
@@ -317,7 +324,7 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
             /// Relay event to user
             al_emit_user_event(tpool->usereventsource , &ev , 0);
          }
-         
+
          /// A thread notified us that it has stopped
          if (ev.type == TSTOPMSG) {
             Thread* t = (Thread*)ev.user.data1;
@@ -325,7 +332,7 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
             assert(t == tpool->GetThread(t->ID()));
 
             tpool->FinishJob(t);
-            
+
             /// Relay event to user
             al_emit_user_event(tpool->usereventsource , &ev , 0);
 
@@ -370,12 +377,12 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data) {
    }///   while (!al_thread_should_stop(thread) && !kill) {
 
    tpool->running = false;
-   
+
    ALLEGRO_EVENT ev;
    ev.type = QUITMSG;
    ev.user.data1 = (intptr_t)tpool;
    al_emit_user_event(tpool->oureventsource , &ev , 0);
-   
+
    return data;
 }
 

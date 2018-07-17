@@ -24,21 +24,26 @@ void* DoNothing(ALLEGRO_THREAD* t , void* d) {
 
 void Fail(char const *expr , char const *file , int line , char const *func) {
    int d = 1/0;
+   (void)expr;
+   (void)file;
+   (void)line;
+   (void)func;
+   (void)d;
 }
 
 int main5(int argc , char** argv) {
-   
+
    (void)argc;
    (void)argv;
-   
+
    int nthreads = 100;
-   
+
    if (argc > 1) {
       sscanf(argv[1] , "%d" , &nthreads);
    }
-   
+
    if (!al_init()) {return -1;}
-   
+
    al_register_assert_handler(Fail);
 ///   ALLEGRO_EVENT_QUEUE* q = al_create_event_queue();
 
@@ -55,13 +60,13 @@ int main5(int argc , char** argv) {
       }
    }
    printf("Added %d jobs, %d are bad.\n" , nthreads , bad);
-   
+
    for (int i = 0 ; i < nthreads ; ++i) {
       if (threads[i]) {al_destroy_thread(threads[i]);}
    }
-   
-   delete threads;
-   
+
+   delete [] threads;
+
    return 0;
 }
 
@@ -72,7 +77,7 @@ class DATA {
 public :
    ALLEGRO_BITMAP* bmp;
    std::string name;
-   
+
    DATA() :
       bmp(0),
       name("")
@@ -87,8 +92,10 @@ public :
    int x;
    Data() : x(0) {static int i = 1;x = i++;}
 };
+
+
+
 void* Sum(ALLEGRO_THREAD* t , void* data) {
-   return data;
    (void)t;
    Data* d = (Data*)data;
    int z = d->x;
@@ -99,16 +106,17 @@ void* Sum(ALLEGRO_THREAD* t , void* data) {
 }
 
 
+
 int main(int argc , char** argv) {
    (void)argc;
    (void)argv;
 
-   int NDAT = 300;
+   int NDAT = 1000;
 
    if (argc > 1) {
       sscanf(argv[1] , "%d" , &NDAT);
    }
-   
+
    if (!al_init()) {return -1;}
 
    al_register_assert_handler(Fail);
@@ -123,9 +131,7 @@ int main(int argc , char** argv) {
 
    double tstart = al_get_time();
    tpool.Start();
-   al_rest(1.0);
-   tpool.Kill();
-///   tpool.Finish();
+   tpool.Finish();
    double tstop = al_get_time();
    double ttotal = tstop - tstart;
 
@@ -136,9 +142,9 @@ int main(int argc , char** argv) {
    }
 
    printf("%d sums took %.6lf seconds.\n" , NDAT , ttotal);
-   
-   delete dat;
-   
+
+   delete [] dat;
+
    return 0;
 }
 
@@ -151,9 +157,9 @@ int main3(int argc , char** argv) {
    int bw = 64;
    int bh = 64;
    int nbitmaps = 50;
-   
+
    bool usage = false;
-   
+
    for (int a = 1 ; a < argc ; a++) {
       std::string arg = argv[a];
       if (arg.compare(0 , 2 , "-j") == 0) {
@@ -187,7 +193,7 @@ int main3(int argc , char** argv) {
       }
 
    }
-   
+
    if (usage) {
       printf("Usage for tpool :\n");
       printf("tpool [options]\n");
@@ -198,26 +204,26 @@ int main3(int argc , char** argv) {
       printf("-h shows help.\n");
       return -1;
    }
-   
+
    printf("Saving %d bitmaps of size %d x %d using %d threads.\n" , nbitmaps , bw , bh , jobs);
-   
-   
+
+
    if (!al_init() || !al_init_image_addon() || !al_init_font_addon() || !al_init_ttf_addon()) {return 1;}
-   
+
    if (!al_install_keyboard()) {return 2;}
-   
+
    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_OPENGL);
    ALLEGRO_DISPLAY* d = al_create_display(800,600);
-   
+
    ALLEGRO_FONT* dfont = al_create_builtin_font();
-   
+
    ALLEGRO_FONT* nicefont = al_load_ttf_font("Verdana.ttf" , -bh/2 , 0);
-   
+
    ALLEGRO_FONT* font = nicefont?nicefont:dfont;
-   
+
    DATA* dat = new DATA[nbitmaps];
-   
-   
+
+
    for (int i = 0 ; i < nbitmaps ; ++i) {
       al_set_new_bitmap_flags(ALLEGRO_VIDEO_BITMAP);
       ALLEGRO_BITMAP* bmp = al_create_bitmap(bw,bh);
@@ -240,21 +246,21 @@ int main3(int argc , char** argv) {
 ///      al_save_bitmap(dat[i].name.c_str() , dat[i].bmp);
    }
 ///   return -5;
-   
+
    al_set_target_backbuffer(d);
    al_clear_to_color(al_map_rgb(0,255,0));
    al_flip_display();
-   
+
    printf("%d bitmaps created.\n" , nbitmaps);
-   
+
 
    Thread thread;
-   
+
    ThreadPool tpool;
 //**
-   
+
    tpool.SetNumThreads(jobs);
-   
+
    for (int i = 0 ; i < nbitmaps ; ++i) {
       THREADID id = tpool.AddJob(SaveBitmap , &dat[i]);
       (void)id;
@@ -262,7 +268,7 @@ int main3(int argc , char** argv) {
    }
 
    ALLEGRO_EVENT_QUEUE* q = al_create_event_queue();
-   
+
    al_register_event_source(q , tpool.EventSource());
    al_register_event_source(q , al_get_display_event_source(d));
    al_register_event_source(q , al_get_keyboard_event_source());
@@ -283,7 +289,7 @@ int main3(int argc , char** argv) {
    double tstop = 0.0;
    double ttotal = 0.0;
    tpool.Start();
-   
+
    while (!quit) {
       do {
          ALLEGRO_EVENT ev;
@@ -315,7 +321,7 @@ int main3(int argc , char** argv) {
    if (!finished) {
       tpool.Kill();
    }
-   
+
    double total = 0.0;
    std::map<THREADID , Thread*> tmap = tpool.GetAllJobs();
    for (std::map<THREADID , Thread*>::iterator it = tmap.begin() ; it != tmap.end() ; ++it) {
@@ -327,13 +333,13 @@ int main3(int argc , char** argv) {
    double average = total / nbitmaps;
    printf("Average time of execution is %.6lf seconds. Total time is %.6lf seconds.\n" ,
            average , ttotal);
-   
+
    tpool.Dispose();
-   
+
    delete dat;
 
 //*/
-      
+
    return 0;
 }
 

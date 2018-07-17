@@ -39,25 +39,27 @@ protected :
    void* rdata;
    THREADID tid;
    bool running;
+   bool finished;
    double tstart;
    double tstop;
-   
-   
+
+
    friend void* BypassProcess(ALLEGRO_THREAD* athread , void* data);
-   
+
    void Free();
 
 public :
    Thread();
    ~Thread();
-   bool Create(THREADPROC proc , void* data);
-   void Run();
+   void Setup(THREADPROC proc , void* data);
+   void Start();
    void Finish();
    void Kill();
 
    void* Data() {return tdata;}
    ALLEGRO_EVENT_SOURCE* EventSource() {return evsrc;}
    THREADID ID() {return tid;}
+
    double RunTime();
    double StopTime();
    double StartTime();

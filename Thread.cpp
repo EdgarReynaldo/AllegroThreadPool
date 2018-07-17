@@ -16,7 +16,6 @@ const unsigned int TSTARTMSG = ALLEGRO_GET_EVENT_TYPE('T' , 'S' , 'T' , 'A');
 
 
 
-
 const THREADID BADTHREADID = ~0;
 
 
@@ -30,7 +29,7 @@ static THREADID NextThreadID() {
 
 void* BypassProcess(ALLEGRO_THREAD* athread , void* data) {
    Thread* thread = (Thread*)data;
-   
+
    if (thread->tid == 860) {
       printf("Thread 860 starting.\n");
    }
@@ -45,23 +44,23 @@ void* BypassProcess(ALLEGRO_THREAD* athread , void* data) {
    thread->rdata = thread->tproc(athread , thread->tdata);
    thread->running = false;
    thread->tstop = al_get_time();
-   
+
    ALLEGRO_EVENT ev2;
    ev2.type = TSTOPMSG;
    ev2.user.data1 = (intptr_t)thread;
    al_emit_user_event(thread->evsrc , &ev2 , 0);
-   
+
    if (thread->tid == 860) {
       printf("Thread 860 exiting.\n");
    }
-   
+
    return thread->rdata;
 }
 
 
 
 void Thread::Free() {
-   if (athread) {Finish();}
+   Finish();
    al_destroy_thread(athread);
    athread = 0;
 }
@@ -76,6 +75,7 @@ Thread::Thread() :
       rdata(0),
       tid(NextThreadID()),
       running(false),
+      finished(false),
       tstart(0.0),
       tstop(0.0)
 {
@@ -94,29 +94,38 @@ Thread::~Thread() {
 
 
 
-bool Thread::Create(THREADPROC proc , void* data) {
-   Free();
+void Thread::Setup(THREADPROC proc , void* data) {
    tproc = proc;
    tdata = data;
-   athread = al_create_thread(BypassProcess , this);
-   return athread;
 }
 
 
 
-void Thread::Run() {
-   al_start_thread(athread);
+void Thread::Start() {
+   Free();
+   finished = false;
+   assert(tproc);
+   athread = al_create_thread(BypassProcess , this);
+   assert(athread);
+   if (athread) {
+      al_start_thread(athread);
+   }
 }
 
 
 
 void Thread::Finish() {
-   al_join_thread(athread , &tdata);
+   if (!athread) {return;}
+   if (!finished) {
+      al_join_thread(athread , 0);
+      finished = true;
+   }
 }
 
 
 
 void Thread::Kill() {
+   if (!athread) {return;}
    al_set_thread_should_stop(athread);
    Finish();
 }

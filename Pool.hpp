@@ -37,28 +37,28 @@ void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data);
 
 class ThreadPool {
 protected :
-   
+
    std::unordered_set<Thread*> workers;
    std::deque<Thread*> jobs;
    std::map<THREADID , Thread*> complete_jobs;
    std::map<THREADID , Thread*> all_jobs;
-   
+
    ALLEGRO_MUTEX* guard;
-   
+
    ALLEGRO_THREAD* master_thread;/// Runs MasterThreadProc
-   
+
    ALLEGRO_EVENT_QUEUE* queue;
    ALLEGRO_EVENT_QUEUE* fbqueue;
-   
+
    ALLEGRO_EVENT_SOURCE* oureventsource;
    ALLEGRO_EVENT_SOURCE* usereventsource;
-   
+
    int maxnthreads;
    bool running;
    bool paused;
-   
+
    friend void* MasterThreadProc(ALLEGRO_THREAD* thread , void* data);
-   
+
    unsigned int NWorkers();
    unsigned int NJobsWaiting();
    unsigned int MaxWorkers();
@@ -71,29 +71,31 @@ protected :
    void Guard();
    void Unguard();
 
+   void DisposeAll();
+
 public :
    ThreadPool();
    ~ThreadPool();
 
    void SetNumThreads(unsigned int N);
-   
+
    THREADID AddJob(THREADPROC proc , void* data);
-   
+
    void Start();
    void Pause();
    void Resume();
-   
+
    void Finish();
    void Kill();
-   
+
    void Abort();/// You really shoudln't call this. In fact I don't know why I coded it.
-   
+
    void Dispose();
 
    unsigned int NumJobsLeft();
 
    Thread* GetThread(THREADID id);
-   
+
    std::map<THREADID , Thread*> GetAllJobs();
 
    ALLEGRO_EVENT_SOURCE* EventSource() {return usereventsource;}
